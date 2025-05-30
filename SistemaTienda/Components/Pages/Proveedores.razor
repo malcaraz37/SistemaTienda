@@ -1,0 +1,132 @@
+﻿@rendermode InteractiveServer
+@page "/proveedores"
+@using SistemaTienda.Models
+@using SistemaTienda.Repositorio
+@inject IRepositorioProveedores repoProveedores
+
+<h3>Gestión de Proveedores</h3>
+
+<EditForm Model="proveedorActual" OnValidSubmit="GuardarProveedor" FormName="formProveedores" novalidate>
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label>Nombre empresa:</label>
+        <InputText class="form-control" @bind-Value="proveedorActual.NombreEmpresa" />
+        <ValidationMessage For="@(() => proveedorActual.NombreEmpresa)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Contacto:</label>
+        <InputText class="form-control" @bind-Value="proveedorActual.Contacto" />
+        <ValidationMessage For="@(() => proveedorActual.Contacto)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Teléfono:</label>
+        <InputText class="form-control" @bind-Value="proveedorActual.Telefono" />
+        <ValidationMessage For="@(() => proveedorActual.Telefono)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Correo:</label>
+        <InputText class="form-control" @bind-Value="proveedorActual.Correo" />
+        <ValidationMessage For="@(() => proveedorActual.Correo)" />
+    </div>
+
+    <button class="btn btn-success" type="submit">
+        @(proveedorActual.Id == 0 ? "Agregar" : "Actualizar")
+    </button>
+
+    @if (proveedorActual.Id != 0)
+    {
+        <button class="btn btn-secondary ms-2" type="button" @onclick="CancelarEdicion">Cancelar</button>
+    }
+</EditForm>
+
+<hr />
+
+<h5>Lista de Proveedores</h5>
+
+@if (cargando)
+{
+    <p>Cargando proveedores...</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Empresa</th>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th>Correo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var proveedor in proveedores)
+            {
+                <tr>
+                    <td>@proveedor.NombreEmpresa</td>
+                    <td>@proveedor.Contacto</td>
+                    <td>@proveedor.Telefono</td>
+                    <td>@proveedor.Correo</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" @onclick="() => EditarProveedor(proveedor)">Editar</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarProveedor(proveedor.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Proveedor> proveedores = [];
+    private Proveedor proveedorActual = new();
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        proveedores = await repoProveedores.ObtenerTodos();
+        cargando = false;
+    }
+
+    private async Task GuardarProveedor()
+    {
+        if (proveedorActual.Id == 0)
+        {
+            await repoProveedores.Agregar(proveedorActual);
+        }
+        else
+        {
+            await repoProveedores.Actualizar(proveedorActual);
+        }
+
+        proveedorActual = new();
+        proveedores = await repoProveedores.ObtenerTodos();
+    }
+
+    private void EditarProveedor(Proveedor proveedor)
+    {
+        proveedorActual = new Proveedor
+            {
+                Id = proveedor.Id,
+                NombreEmpresa = proveedor.NombreEmpresa,
+                Contacto = proveedor.Contacto,
+                Telefono = proveedor.Telefono,
+                Correo = proveedor.Correo
+            };
+    }
+
+    private async Task EliminarProveedor(int id)
+    {
+        await repoProveedores.Eliminar(id);
+        proveedores = await repoProveedores.ObtenerTodos();
+    }
+
+    private void CancelarEdicion()
+    {
+        proveedorActual = new();
+    }
+}

@@ -1,0 +1,147 @@
+﻿@rendermode InteractiveServer
+@page "/entradas"
+@using SistemaTienda.Models
+@using SistemaTienda.Repositorio
+@inject IRepositorioEntradas repoEntradas
+@inject IRepositorioProductos repoProductos
+
+<h3>Registro de Entradas</h3>
+
+<EditForm Model="entradaActual" OnValidSubmit="GuardarEntrada" FormName="formEntradas" novalidate>
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label>Producto:</label>
+        <select class="form-control" @bind="entradaActual.ProductoId">
+            <option value="">-- Selecciona un producto --</option>
+            @foreach (var producto in productos)
+            {
+                <option value="@producto.Id">@producto.Nombre</option>
+            }
+        </select>
+        <ValidationMessage For="@(() => entradaActual.ProductoId)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Cantidad:</label>
+        <InputNumber class="form-control" @bind-Value="entradaActual.Cantidad" />
+        <ValidationMessage For="@(() => entradaActual.Cantidad)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Fecha:</label>
+        <InputDate class="form-control" @bind-Value="entradaActual.Fecha" />
+        <ValidationMessage For="@(() => entradaActual.Fecha)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Descripción:</label>
+        <InputText class="form-control" @bind-Value="entradaActual.Descripcion" />
+        <ValidationMessage For="@(() => entradaActual.Descripcion)" />
+    </div>
+
+    <button class="btn btn-info" type="submit">
+        @(entradaActual.Id == 0 ? "Registrar" : "Actualizar")
+    </button>
+
+    @if (entradaActual.Id != 0)
+    {
+        <button class="btn btn-secondary ms-2" type="button" @onclick="CancelarEdicion">Cancelar</button>
+    }
+</EditForm>
+
+<hr />
+
+<h5>Entradas registradas</h5>
+
+@if (cargando)
+{
+    <p>Cargando entradas...</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Fecha</th>
+                <th>Descripción</th>
+                <th>Stock actual</th>
+                <th>Proveedor</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entrada in entradas)
+            {
+                <tr>
+                    <td>@entrada.Producto?.Nombre</td>
+                    <td>@entrada.Cantidad</td>
+                    <td>@entrada.Fecha?.ToShortDateString()</td>
+                    <td>@entrada.Descripcion</td>
+                    <td>@entrada.Producto?.Stock</td>
+                    <td>@entrada.Producto?.Proveedor?.NombreEmpresa</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" @onclick="() => EditarEntrada(entrada)">Editar</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarEntrada(entrada.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Producto> productos = new();
+    private List<Entrada> entradas = new();
+    private Entrada entradaActual = new() { Fecha = DateTime.Today };
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        productos = await repoProductos.ObtenerTodos();
+        entradas = await repoEntradas.ObtenerTodas();
+        cargando = false;
+    }
+
+    private async Task GuardarEntrada()
+    {
+        if (entradaActual.Id == 0)
+        {
+            await repoEntradas.Agregar(entradaActual);
+        }
+        else
+        {
+            await repoEntradas.Actualizar(entradaActual);
+        }
+
+        entradaActual = new() { Fecha = DateTime.Today };
+        entradas = await repoEntradas.ObtenerTodas();
+        productos = await repoProductos.ObtenerTodos();
+    }
+
+    private void EditarEntrada(Entrada entrada)
+    {
+        entradaActual = new Entrada
+            {
+                Id = entrada.Id,
+                ProductoId = entrada.ProductoId,
+                Cantidad = entrada.Cantidad,
+                Fecha = entrada.Fecha,
+                Descripcion = entrada.Descripcion
+            };
+    }
+
+    private async Task EliminarEntrada(int id)
+    {
+        await repoEntradas.Eliminar(id);
+        entradas = await repoEntradas.ObtenerTodas();
+        productos = await repoProductos.ObtenerTodos();
+    }
+
+    private void CancelarEdicion()
+    {
+        entradaActual = new() { Fecha = DateTime.Today };
+    }
+}
